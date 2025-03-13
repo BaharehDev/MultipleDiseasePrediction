@@ -1,22 +1,44 @@
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
-blood_sample_dataset_balanced = pd.read_csv('/Users/bahar/Documents/IT-Högskolan/assignment3/dataset/Blood_samples_dataset_balanced_2(f).csv')
-blood_samples_dataset_test = pd.read_csv('/Users/bahar/Documents/IT-Högskolan/assignment3/dataset/blood_samples_dataset_test.csv')
 
-print('The balanced data is:')
-print(blood_sample_dataset_balanced.head())
-print(blood_sample_dataset_balanced.info())
-print(blood_sample_dataset_balanced.isnull().sum())
+# Load datasets
+balanced_data = pd.read_csv('/Users/bahar/Documents/IT-Högskolan/assignment3/dataset/Blood_samples_dataset_balanced_2(f).csv')
+test_data = pd.read_csv('/Users/bahar/Documents/IT-Högskolan/assignment3/dataset/blood_samples_dataset_test.csv')
 
-print('\nThe test data is:')
-print(blood_samples_dataset_test.head())
-print(blood_samples_dataset_test.info())
-print(blood_samples_dataset_test.isnull().sum())
+# Check data information
+print(balanced_data.info())
+print(test_data.info())
 
-print('\nblood_sample_dataset_balanced duplicated values:', blood_sample_dataset_balanced.duplicated().sum())
-print('\nblood_sample_dataset_balanced duplicated values:', blood_samples_dataset_test.duplicated().sum())
+# Check for missing values
+print(balanced_data.isnull().sum())
+print(test_data.isnull().sum())
 
-clean_blood_sample_dataset_balanced = blood_sample_dataset_balanced.drop_duplicates()
-print('\nDuplicates rows in blood_sample_dataset_balanced has removed. The result:', clean_blood_sample_dataset_balanced.duplicated().sum())
+# Remove duplicate rows
+balanced_data = balanced_data.drop_duplicates()
 
-print('\nsummary statistics for numerical columns:', blood_sample_dataset_balanced.describe())
+# Convert numeric columns to float
+balanced_data.iloc[:, :-1] = balanced_data.iloc[:, :-1].apply(pd.to_numeric, errors='coerce')
+
+# Now calculate quantiles correctly
+Q1 = balanced_data.select_dtypes(include=['number']).quantile(0.25)
+Q3 = balanced_data.select_dtypes(include=['number']).quantile(0.75)
+
+IQR = Q3 - Q1
+lower_bound = Q1 - 1.5 * IQR
+upper_bound = Q3 + 1.5 * IQR
+
+# Apply the filtering column by column
+for col in balanced_data.select_dtypes(include=['number']).columns:
+    balanced_data = balanced_data[(balanced_data[col] >= lower_bound[col]) & (balanced_data[col] <= upper_bound[col])]
+
+# Standardize numerical data
+scaler = StandardScaler()
+# Separate numeric features and the target column
+X = balanced_data.drop(columns=['Disease'])
+y = balanced_data['Disease']  # Target column
+
+# Standardize numerical data
+scaler = StandardScaler()
+X_scaled = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
 
